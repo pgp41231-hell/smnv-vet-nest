@@ -5,8 +5,8 @@ A synchronized two-interface product demo for a veterinary care marketplace. The
 ## Run locally
 
 ```bash
-pnpm install
-pnpm dev
+npm install
+npm run dev
 ```
 
 ## Demo flow
