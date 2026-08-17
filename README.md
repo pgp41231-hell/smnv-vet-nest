@@ -4,6 +4,8 @@ A synchronized two-interface product demo for a veterinary care marketplace. The
 
 The customer app also includes a unified marketplace of 11 home-care services and diagnostic tests. Each booking assigns a verified professional and creates a detailed, trackable job page.
 
+Bruno’s Pet Passport adds a vaccine calendar, upcoming-care reminders, a secure medical-history timeline, addable health records, health-score quests, and collectible wellness badges.
+
 ## Run locally
 
 ```bash

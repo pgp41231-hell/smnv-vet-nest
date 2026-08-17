@@ -5,7 +5,8 @@ import {
   Clock3, Heart, Home, MessageCircle, PawPrint, Search, ShieldCheck,
   Sparkles, Star, Stethoscope, UserRound, Video, X, Scissors,
   Syringe, FlaskConical, Bone, MapPin, Phone as PhoneCall, Navigation, Award,
-  CheckCircle2, ClipboardCheck, Activity, CircleDot, BadgeCheck
+  CheckCircle2, ClipboardCheck, Activity, CircleDot, BadgeCheck, BookOpen,
+  Plus, Trophy, Lock, FileText, Eye, Weight, Droplets, Gift, Save
 } from 'lucide-react';
 import './styles.css';
 
@@ -81,6 +82,19 @@ const professionals = [
   { name: 'Sanya Kapoor', role: 'Pet Health Assistant', rating: '4.95', jobs: 543, image: 'https://images.unsplash.com/photo-1544725176-7c40e5a71c5e?auto=format&fit=crop&w=240&q=85' },
 ];
 
+const initialHealthRecords = [
+  { id: 1, type: 'vaccine', title: 'DHPP Booster', date: '12 May 2026', note: 'Annual booster completed', vet: 'Dr. Maya Kapoor', color: 'coral' },
+  { id: 2, type: 'diagnosis', title: 'Seasonal dermatitis', date: '03 February 2026', note: 'Mild allergy; medicated shampoo prescribed', vet: 'Dr. Riya Nair', color: 'purple' },
+  { id: 3, type: 'vaccine', title: 'Rabies vaccine', date: '18 August 2025', note: 'Valid for one year', vet: 'Dr. Arjun Mehta', color: 'blue' },
+  { id: 4, type: 'checkup', title: 'Annual wellness exam', date: '14 June 2025', note: 'Healthy weight and vitals', vet: 'Dr. Maya Kapoor', color: 'green' },
+];
+
+const upcomingVaccines = [
+  { name: 'Rabies booster', date: '18 Aug', days: 'in 2 days', tone: 'coral' },
+  { name: 'Kennel cough', date: '02 Sep', days: 'in 17 days', tone: 'purple' },
+  { name: 'Deworming dose', date: '21 Sep', days: 'in 36 days', tone: 'green' },
+];
+
 function StatusBar({ light = false }) {
   return <div className={`status-bar ${light ? 'light' : ''}`}><span>9:41</span><div className="island"/><div className="status-icons"><span>▮▮▮</span><span>⌁</span><span className="battery"/></div></div>;
 }
@@ -92,11 +106,11 @@ function Phone({ label, tone, children }) {
   </div>;
 }
 
-function ClientNav({ active = 'home' }) {
+function ClientNav({ active = 'home', onPassport, onHome }) {
   return <div className="bottom-nav">
-    <NavIcon Icon={Home} label="Home" active={active === 'home'} />
+    <button className="nav-button" onClick={onHome}><NavIcon Icon={Home} label="Home" active={active === 'home'} /></button>
     <NavIcon Icon={CalendarDays} label="Bookings" active={active === 'bookings'} />
-    <div className="nav-paw"><PawPrint size={20}/></div>
+    <button className={`nav-paw ${active === 'passport' ? 'active' : ''}`} onClick={onPassport} aria-label="Open Bruno's passport"><PawPrint size={20}/></button>
     <NavIcon Icon={MessageCircle} label="Chat" />
     <NavIcon Icon={UserRound} label="Profile" />
   </div>;
@@ -111,6 +125,7 @@ function ClientApp({ appointment, onBook }) {
   const [doctor, setDoctor] = useState(doctors[0]);
   const [selectedService, setSelectedService] = useState(services[0]);
   const [serviceJob, setServiceJob] = useState(null);
+  const [healthRecords, setHealthRecords] = useState(initialHealthRecords);
   const [selectedDate, setSelectedDate] = useState(0);
   const [selectedTime, setSelectedTime] = useState('6:30 PM');
   const [reason, setReason] = useState('Not eating / low appetite');
@@ -133,6 +148,14 @@ function ClientApp({ appointment, onBook }) {
     onBook({ doctor, date: dates[selectedDate], time: selectedTime, reason });
     setScreen('success');
   };
+  const addHealthRecord = record => {
+    setHealthRecords(current => [{ id: Date.now(), ...record }, ...current]);
+    setScreen('passport');
+  };
+
+  if (screen === 'passport') return <PassportScreen records={healthRecords} onBack={() => setScreen('home')} onAdd={() => setScreen('add-record')} onHome={() => setScreen('home')} />;
+
+  if (screen === 'add-record') return <AddHealthRecordScreen onBack={() => setScreen('passport')} onSave={addHealthRecord} />;
 
   if (screen === 'services') return <ServicesScreen onBack={() => setScreen('home')} onSelect={openService} />;
 
@@ -188,7 +211,7 @@ function ClientApp({ appointment, onBook }) {
   return <ClientFrame>
     <div className="client-hero">
       <div className="top-row"><div><p>Good evening,</p><h2>Hi, Ananya <span>👋</span></h2></div><button className="icon-button"><Bell size={20}/><i/></button></div>
-      <div className="pet-switcher"><div className="pet-avatar">🐶</div><div><small>CARE FOR</small><strong>Bruno <span>· Golden Retriever</span></strong></div><ChevronRight size={17}/></div>
+      <button className="pet-switcher" onClick={() => setScreen('passport')}><div className="pet-avatar">🐶</div><div><small>BRUNO’S PET PASSPORT</small><strong>Health records <span>· 82% complete</span></strong></div><span className="passport-mini"><BookOpen size={13}/></span><ChevronRight size={17}/></button>
     </div>
     <div className="scroll-content home-content">
       {serviceJob && <ServiceJobCard job={serviceJob} onClick={() => setScreen('job')} />}
@@ -204,7 +227,96 @@ function ClientApp({ appointment, onBook }) {
       <div className="section-heading"><div><p className="eyebrow">TOP-RATED EXPERTS</p><h2>Available veterinarians</h2></div><button>See all</button></div>
       <div className="doctor-list">{doctors.map(doc => <DoctorCard key={doc.id} doctor={doc} onClick={() => openDoctor(doc)} />)}</div>
     </div>
-    <ClientNav active={appointment ? 'bookings' : 'home'} />
+    <ClientNav active={appointment ? 'bookings' : 'home'} onPassport={() => setScreen('passport')} onHome={() => setScreen('home')} />
+  </ClientFrame>;
+}
+
+function PassportScreen({ records, onBack, onAdd, onHome }) {
+  const [tab, setTab] = useState('overview');
+  const vaccineCount = records.filter(record => record.type === 'vaccine').length;
+  const calendarDays = Array.from({ length: 35 }, (_, index) => index < 5 ? null : index - 4);
+  return <ClientFrame>
+    <div className="passport-header">
+      <button onClick={onBack}><ArrowLeft size={19}/></button>
+      <div><span><BookOpen size={14}/> PET PASSPORT</span><strong>Bruno’s health</strong></div>
+      <button onClick={onAdd}><Plus size={19}/></button>
+    </div>
+    <div className="passport-tabs">
+      {['overview', 'calendar', 'records'].map(item => <button key={item} className={tab === item ? 'active' : ''} onClick={() => setTab(item)}>{item}</button>)}
+    </div>
+    <div className="scroll-content passport-content">
+      {tab === 'overview' && <>
+        <div className="passport-card">
+          <span className="passport-pattern">✦　✿　✦</span>
+          <div className="passport-card-top"><div className="passport-pet-photo">🐶<span><BadgeCheck size={15}/></span></div><div><small>REPUBLIC OF VETNEST</small><h2>Bruno</h2><p>Golden Retriever · Male · 4 years</p></div><BookOpen size={23}/></div>
+          <div className="passport-id"><span><small>PASSPORT NO.</small>VN-BLR-0426</span><span><small>MICROCHIP</small>•••• 8821</span><span><small>BLOOD GROUP</small>DEA 1.1+</span></div>
+        </div>
+        <div className="health-score-card">
+          <div className="score-ring"><span><strong>82</strong><small>/100</small></span></div>
+          <div><p className="eyebrow">HEALTH QUEST</p><h3>Bruno is doing great!</h3><p>Complete 2 more tasks to unlock the <strong>Super Pup</strong> badge.</p><div className="quest-bar"><i/><span>4 of 6 complete</span></div></div>
+          <span className="quest-trophy"><Trophy size={20}/></span>
+        </div>
+        <div className="passport-stat-grid">
+          <button onClick={() => setTab('calendar')}><span className="stat-bubble coral"><Syringe size={18}/></span><strong>{vaccineCount}</strong><small>Vaccines</small><em>1 due soon</em></button>
+          <button onClick={() => setTab('records')}><span className="stat-bubble purple"><FileText size={18}/></span><strong>{records.length}</strong><small>Records</small><em>All secured</em></button>
+          <button><span className="stat-bubble blue"><Weight size={18}/></span><strong>29.4</strong><small>Weight kg</small><em>Healthy range</em></button>
+        </div>
+        <div className="passport-section-head"><div><p className="eyebrow">NEXT UP</p><h3>Care calendar</h3></div><button onClick={() => setTab('calendar')}>See calendar</button></div>
+        <button className="next-vaccine-card" onClick={() => setTab('calendar')}>
+          <span className="vaccine-date"><strong>18</strong><small>AUG</small></span>
+          <span><small>DUE IN 2 DAYS</small><strong>Rabies booster</strong><em>Annual vaccination · Dr. Maya</em></span>
+          <span className="vaccine-confetti">💉</span><ChevronRight size={17}/>
+        </button>
+        <div className="badge-shelf"><div><span>🏆</span><small>Healthy<br/>Hero</small></div><div><span>💉</span><small>Vax<br/>Champ</small></div><div><span>✨</span><small>Perfect<br/>Checkup</small></div><div className="locked"><span><Lock size={15}/></span><small>Super<br/>Pup</small></div></div>
+      </>}
+
+      {tab === 'calendar' && <>
+        <div className="calendar-cheer"><span>🗓️</span><div><p className="eyebrow">BRUNO’S CARE PLAN</p><h2>Never miss a tail-wagging milestone!</h2></div></div>
+        <div className="pet-calendar">
+          <div className="calendar-title"><button>‹</button><div><strong>August 2026</strong><small>3 care events</small></div><button>›</button></div>
+          <div className="weekdays">{['MON','TUE','WED','THU','FRI','SAT','SUN'].map(day => <span key={day}>{day}</span>)}</div>
+          <div className="calendar-grid">{calendarDays.map((day, index) => <button key={index} className={`${day === 16 ? 'today' : ''} ${day === 18 ? 'due' : ''} ${day === 12 ? 'complete' : ''}`} disabled={!day}>{day && <><span>{day}</span>{[12,18,21].includes(day) && <i/>}</>}</button>)}</div>
+          <div className="calendar-legend"><span><i className="done"/>Completed</span><span><i className="due"/>Upcoming</span><span><i className="care"/>Care task</span></div>
+        </div>
+        <div className="passport-section-head"><div><p className="eyebrow">UPCOMING</p><h3>Vaccines & care</h3></div><button onClick={onAdd}><Plus size={12}/> Add</button></div>
+        <div className="upcoming-list">{upcomingVaccines.map((item, index) => <div className="upcoming-item" key={item.name}><span className={`upcoming-date ${item.tone}`}><strong>{item.date.split(' ')[0]}</strong><small>{item.date.split(' ')[1]}</small></span><div><strong>{item.name}</strong><span>{index === 2 ? 'Home care task' : 'Vaccination reminder'}</span></div><em>{item.days}</em><button>•••</button></div>)}</div>
+        <button className="calendar-add-btn" onClick={onAdd}><Plus size={16}/> Add vaccine or reminder</button>
+      </>}
+
+      {tab === 'records' && <>
+        <div className="records-heading"><div><p className="eyebrow">MEDICAL HISTORY</p><h2>Bruno’s story,<br/>safely kept.</h2><p>Vaccines, diagnoses and checkups in one secure timeline.</p></div><div className="records-lock"><Lock size={17}/><span>Private<br/>& secure</span></div></div>
+        <div className="record-filter"><button className="active">All</button><button>Vaccines</button><button>Diagnoses</button><button>Visits</button></div>
+        <div className="health-timeline">{records.map((record, index) => <div className="timeline-record" key={record.id}><div className={`timeline-icon ${record.color}`}>{record.type === 'vaccine' ? <Syringe size={16}/> : record.type === 'diagnosis' ? <Stethoscope size={16}/> : <ClipboardCheck size={16}/>}</div><div className="timeline-line"/><div className="timeline-card"><span>{record.type.toUpperCase()} <em>VERIFIED</em></span><h3>{record.title}</h3><p>{record.note}</p><div><small>{record.date}</small><small>{record.vet}</small></div><button><Eye size={13}/> View details</button></div></div>)}</div>
+        <button className="calendar-add-btn" onClick={onAdd}><Plus size={16}/> Add health record</button>
+      </>}
+    </div>
+    <ClientNav active="passport" onPassport={() => setTab('overview')} onHome={onHome} />
+  </ClientFrame>;
+}
+
+function AddHealthRecordScreen({ onBack, onSave }) {
+  const [type, setType] = useState('vaccine');
+  const [title, setTitle] = useState('Bordetella vaccine');
+  const [date, setDate] = useState('17 Aug 2026');
+  const [note, setNote] = useState('Annual kennel cough protection');
+  const save = () => onSave({ type, title, date, note, vet: 'Dr. Maya Kapoor', color: type === 'vaccine' ? 'coral' : type === 'diagnosis' ? 'purple' : 'green' });
+  return <ClientFrame>
+    <Header title="Add health record" onBack={onBack} />
+    <div className="scroll-content add-record-content">
+      <div className="add-record-hero"><span>🩺</span><div><p className="eyebrow">KEEP THE STORY COMPLETE</p><h2>What would you<br/>like to remember?</h2></div></div>
+      <SectionTitle title="Record type" />
+      <div className="record-type-grid">
+        <button className={type === 'vaccine' ? 'selected' : ''} onClick={() => setType('vaccine')}><span className="coral"><Syringe/></span><strong>Vaccine</strong><small>Doses & boosters</small>{type === 'vaccine' && <Check/>}</button>
+        <button className={type === 'diagnosis' ? 'selected' : ''} onClick={() => setType('diagnosis')}><span className="purple"><Stethoscope/></span><strong>Diagnosis</strong><small>Conditions & notes</small>{type === 'diagnosis' && <Check/>}</button>
+        <button className={type === 'checkup' ? 'selected' : ''} onClick={() => setType('checkup')}><span className="green"><ClipboardCheck/></span><strong>Checkup</strong><small>Routine visits</small>{type === 'checkup' && <Check/>}</button>
+      </div>
+      <label className="cute-field"><span>{type === 'vaccine' ? 'Vaccine name' : type === 'diagnosis' ? 'Diagnosis' : 'Visit title'}</span><input aria-label="Record title" value={title} onChange={event => setTitle(event.target.value)}/></label>
+      <label className="cute-field"><span>Date</span><div><CalendarDays size={15}/><input aria-label="Record date" value={date} onChange={event => setDate(event.target.value)}/></div></label>
+      <label className="cute-field"><span>Notes</span><textarea aria-label="Record notes" value={note} onChange={event => setNote(event.target.value)}/></label>
+      <div className="record-vet-row"><span><Stethoscope size={16}/></span><div><small>PROVIDER</small><strong>Dr. Maya Kapoor</strong></div><BadgeCheck size={17}/></div>
+      <div className="record-privacy"><Lock size={16}/><span>This record is private and securely stored in Bruno’s passport.</span></div>
+    </div>
+    <div className="sticky-cta record-save"><div><small>HEALTH QUEST</small><strong>+10 points</strong></div><button onClick={save}><Save size={16}/> Save record</button></div>
   </ClientFrame>;
 }
 
@@ -405,7 +517,7 @@ function App() {
   };
 
   return <main className="demo-shell">
-    <header className="desktop-header"><div className="desktop-brand"><div className="brand-mark"><PawPrint size={21}/></div><div><strong>VetNest</strong><span>Connected care, demonstrated.</span></div></div><div className="demo-chip"><span/> INTERACTIVE PRODUCT DEMO</div></header>
+    <header className="desktop-header"><div className="desktop-brand"><div className="brand-mark"><PawPrint size={21}/></div><div><strong>VetNest</strong><span>Connected care, demonstrated.</span></div></div></header>
     <section className="phones-stage">
       <Phone label="PET PARENT APP" tone="client"><ClientApp key={demoSession} appointment={appointment} onBook={book}/>{prompt && <ReadyPrompt appointment={appointment} onClose={() => setPrompt(false)}/>}</Phone>
       <ActivityRail events={events} onReset={reset}/>
